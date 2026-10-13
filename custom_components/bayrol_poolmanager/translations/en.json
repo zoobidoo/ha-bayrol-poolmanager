@@ -1,0 +1,224 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "PoolManager",
+        "description": "How should Home Assistant reach your PoolManager? Local is recommended: readings stay on your network.",
+        "menu_options": {
+          "local": "Local network (IP address)",
+          "cloud": "Bayrol cloud portal (bayrol-poolaccess.de)"
+        }
+      },
+      "cloud": {
+        "title": "Bayrol portal",
+        "description": "Your bayrol-poolaccess.de credentials. The device id is detected automatically; it is the number after `c=` in the portal address when you open the device (…/device.php?c=12345).",
+        "data": {
+          "username": "Portal e-mail",
+          "password": "Portal password",
+          "device_id": "Device id (empty = automatic)",
+          "access_code": "Customer access code (optional)"
+        }
+      },
+      "local": {
+        "title": "Local network",
+        "description": "IP address of the PoolManager on your network (check your router's client list, or the device menu Communication & Interfaces → Network (IP) Configuration). Readings work right away; for writes, see the integration options.",
+        "data": {
+          "host": "PoolManager IP address",
+          "access_code": "Customer access code (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The Bayrol portal rejected these credentials",
+      "cannot_connect": "Cannot reach the PoolManager (see the Home Assistant log for details)",
+      "no_data": "Connected, but no reading was received",
+      "remote_login_failed": "The PoolManager refused the remote user login (check user name and password in the device menu User management)"
+    },
+    "abort": {
+      "already_configured": "This PoolManager is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "description": "Local entries are read-only until writes are enabled. Either enter the device's remote user (local writes, recommended), or your Bayrol portal credentials (writes go through the cloud portal; readings stay local).",
+        "data": {
+          "scan_interval": "Polling interval (seconds)",
+          "remote_user": "Remote user (device menu User management)",
+          "remote_password": "Remote user password",
+          "username": "Bayrol portal e-mail (cloud writes)",
+          "password": "Bayrol portal password",
+          "device_id": "Device id (empty = automatic)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "The Bayrol portal rejected these credentials",
+      "cannot_connect": "Cannot reach the PoolManager (see the Home Assistant log for details)",
+      "no_data": "Connected, but no reading was received",
+      "remote_login_failed": "The PoolManager refused the remote user login (check user name and password in the device menu User management)"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ph": {
+        "name": "pH"
+      },
+      "redox": {
+        "name": "Redox"
+      },
+      "water_temperature": {
+        "name": "Water temperature"
+      },
+      "ph_setpoint": {
+        "name": "pH setpoint"
+      },
+      "redox_setpoint": {
+        "name": "Redox setpoint"
+      },
+      "pump_status": {
+        "name": "Filter pump status",
+        "state": {
+          "running": "Running",
+          "stopped": "Stopped",
+          "warning": "Warning",
+          "error": "Error"
+        }
+      },
+      "dosing_ph_status": {
+        "name": "pH dosing status"
+      },
+      "dosing_chlorine_status": {
+        "name": "Chlorine dosing status"
+      },
+      "daily_filtration": {
+        "name": "Scheduled filtration today"
+      },
+      "interval_summary": {
+        "name": "Interval {n}"
+      }
+    },
+    "binary_sensor": {
+      "pump_running": {
+        "name": "Filter pump"
+      },
+      "alarm": {
+        "name": "Collective alarm"
+      },
+      "no_flow": {
+        "name": "No-flow alarm"
+      }
+    },
+    "select": {
+      "pump_mode": {
+        "name": "Filter pump mode",
+        "state": {
+          "auto": "Auto (timer)",
+          "on": "Forced on",
+          "off": "Off"
+        }
+      },
+      "interval_mode": {
+        "name": "Interval {n} mode",
+        "state": {
+          "off": "Pump off",
+          "normal": "Normal",
+          "eco": "Eco",
+          "increased": "Increased"
+        }
+      },
+      "interval_days": {
+        "name": "Interval {n} days",
+        "state": {
+          "every_day": "Every day",
+          "weekdays": "Mon–Fri",
+          "weekend": "Weekend",
+          "none": "None (disabled)",
+          "custom": "Custom"
+        }
+      }
+    },
+    "time": {
+      "interval_start": {
+        "name": "Interval {n} start"
+      },
+      "interval_end": {
+        "name": "Interval {n} end"
+      }
+    }
+  },
+  "selector": {
+    "interval_mode": {
+      "options": {
+        "off": "Pump off",
+        "normal": "Normal",
+        "eco": "Eco",
+        "increased": "Increased"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "Monday",
+        "tue": "Tuesday",
+        "wed": "Wednesday",
+        "thu": "Thursday",
+        "fri": "Friday",
+        "sat": "Saturday",
+        "sun": "Sunday"
+      }
+    }
+  },
+  "services": {
+    "set_timer_interval": {
+      "name": "Set a filtration interval",
+      "description": "Changes one interval of the filter pump timer. Only the fields you provide are changed.",
+      "fields": {
+        "interval": {
+          "name": "Interval",
+          "description": "1–6"
+        },
+        "start": {
+          "name": "Start",
+          "description": "Switch-on time"
+        },
+        "end": {
+          "name": "End",
+          "description": "Switch-off time"
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "Pump mode during the interval"
+        },
+        "days": {
+          "name": "Days",
+          "description": "Active days (empty list disables the interval)"
+        },
+        "entry_id": {
+          "name": "PoolManager",
+          "description": "Only needed if several PoolManagers are configured"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "portal_auth_failed": {
+      "message": "Bayrol portal login failed: {error}"
+    },
+    "write_refused": {
+      "message": "The PoolManager refused the change: {error}"
+    },
+    "write_refused_local": {
+      "message": "The PoolManager refused the change ({error}). Local writes need the device's remote user: set it in the integration options (or enter your Bayrol portal credentials there)."
+    },
+    "write_failed": {
+      "message": "Could not send the change to the PoolManager: {error}"
+    },
+    "no_device": {
+      "message": "No PoolManager is configured"
+    },
+    "nothing_to_change": {
+      "message": "Nothing to change: provide start, end, mode or days"
+    }
+  }
+}

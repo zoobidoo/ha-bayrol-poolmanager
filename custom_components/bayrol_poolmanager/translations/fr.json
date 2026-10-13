@@ -1,0 +1,224 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "PoolManager",
+        "description": "Comment Home Assistant doit-il joindre votre PoolManager ? Le mode local est recommandé : les mesures restent sur votre réseau.",
+        "menu_options": {
+          "local": "Réseau local (adresse IP)",
+          "cloud": "Portail Bayrol (bayrol-poolaccess.de)"
+        }
+      },
+      "cloud": {
+        "title": "Portail Bayrol",
+        "description": "Vos identifiants bayrol-poolaccess.de. Le n° d'appareil est détecté automatiquement ; c'est le nombre après `c=` dans l'adresse du portail quand vous ouvrez l'appareil (…/device.php?c=12345).",
+        "data": {
+          "username": "E-mail du portail",
+          "password": "Mot de passe du portail",
+          "device_id": "N° d'appareil (vide = automatique)",
+          "access_code": "Code d'accès Customer (facultatif)"
+        }
+      },
+      "local": {
+        "title": "Réseau local",
+        "description": "Adresse IP du PoolManager sur votre réseau (liste des clients de votre box/routeur, ou menu de l'appareil Communication & Interfaces → Network (IP) Configuration). La lecture fonctionne tout de suite ; pour les modifications, voir les options de l'intégration.",
+        "data": {
+          "host": "Adresse IP du PoolManager",
+          "access_code": "Code d'accès Customer (facultatif)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Le portail Bayrol a refusé ces identifiants",
+      "cannot_connect": "PoolManager injoignable (détails dans le journal de Home Assistant)",
+      "no_data": "Connecté, mais aucune mesure reçue",
+      "remote_login_failed": "Le PoolManager a refusé l'utilisateur distant (vérifiez nom et mot de passe dans le menu User management de l'appareil)"
+    },
+    "abort": {
+      "already_configured": "Ce PoolManager est déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options",
+        "description": "En local, l'intégration est en lecture seule tant que les écritures ne sont pas activées. Renseignez soit l'utilisateur distant de l'appareil (écritures en local, recommandé), soit vos identifiants du portail Bayrol (écritures via le portail ; la lecture reste locale).",
+        "data": {
+          "scan_interval": "Intervalle d'interrogation (secondes)",
+          "remote_user": "Utilisateur distant (menu User management de l'appareil)",
+          "remote_password": "Mot de passe de l'utilisateur distant",
+          "username": "E-mail du portail Bayrol (écritures via le portail)",
+          "password": "Mot de passe du portail Bayrol",
+          "device_id": "N° d'appareil (vide = automatique)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Le portail Bayrol a refusé ces identifiants",
+      "cannot_connect": "PoolManager injoignable (détails dans le journal de Home Assistant)",
+      "no_data": "Connecté, mais aucune mesure reçue",
+      "remote_login_failed": "Le PoolManager a refusé l'utilisateur distant (vérifiez nom et mot de passe dans le menu User management de l'appareil)"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ph": {
+        "name": "pH"
+      },
+      "redox": {
+        "name": "Redox"
+      },
+      "water_temperature": {
+        "name": "Température de l'eau"
+      },
+      "ph_setpoint": {
+        "name": "Consigne pH"
+      },
+      "redox_setpoint": {
+        "name": "Consigne redox"
+      },
+      "pump_status": {
+        "name": "État pompe de filtration",
+        "state": {
+          "running": "En marche",
+          "stopped": "Arrêtée",
+          "warning": "Avertissement",
+          "error": "Erreur"
+        }
+      },
+      "dosing_ph_status": {
+        "name": "État dosage pH"
+      },
+      "dosing_chlorine_status": {
+        "name": "État dosage chlore"
+      },
+      "daily_filtration": {
+        "name": "Filtration programmée aujourd'hui"
+      },
+      "interval_summary": {
+        "name": "Plage {n}"
+      }
+    },
+    "binary_sensor": {
+      "pump_running": {
+        "name": "Pompe de filtration"
+      },
+      "alarm": {
+        "name": "Alarme générale"
+      },
+      "no_flow": {
+        "name": "Alarme absence de débit"
+      }
+    },
+    "select": {
+      "pump_mode": {
+        "name": "Mode pompe de filtration",
+        "state": {
+          "auto": "Auto (programmateur)",
+          "on": "Marche forcée",
+          "off": "Arrêt"
+        }
+      },
+      "interval_mode": {
+        "name": "Plage {n} – mode",
+        "state": {
+          "off": "Pompe arrêtée",
+          "normal": "Normal",
+          "eco": "Éco",
+          "increased": "Renforcé"
+        }
+      },
+      "interval_days": {
+        "name": "Plage {n} – jours",
+        "state": {
+          "every_day": "Tous les jours",
+          "weekdays": "Lun–Ven",
+          "weekend": "Week-end",
+          "none": "Aucun (plage désactivée)",
+          "custom": "Personnalisé"
+        }
+      }
+    },
+    "time": {
+      "interval_start": {
+        "name": "Plage {n} – début"
+      },
+      "interval_end": {
+        "name": "Plage {n} – fin"
+      }
+    }
+  },
+  "selector": {
+    "interval_mode": {
+      "options": {
+        "off": "Pompe arrêtée",
+        "normal": "Normal",
+        "eco": "Éco",
+        "increased": "Renforcé"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "Lundi",
+        "tue": "Mardi",
+        "wed": "Mercredi",
+        "thu": "Jeudi",
+        "fri": "Vendredi",
+        "sat": "Samedi",
+        "sun": "Dimanche"
+      }
+    }
+  },
+  "services": {
+    "set_timer_interval": {
+      "name": "Régler une plage de filtration",
+      "description": "Modifie une plage du programmateur de la pompe de filtration. Seuls les champs renseignés sont modifiés.",
+      "fields": {
+        "interval": {
+          "name": "Plage",
+          "description": "1–6"
+        },
+        "start": {
+          "name": "Début",
+          "description": "Heure d'enclenchement"
+        },
+        "end": {
+          "name": "Fin",
+          "description": "Heure d'arrêt"
+        },
+        "mode": {
+          "name": "Mode",
+          "description": "Mode de la pompe pendant la plage"
+        },
+        "days": {
+          "name": "Jours",
+          "description": "Jours actifs (liste vide = plage désactivée)"
+        },
+        "entry_id": {
+          "name": "PoolManager",
+          "description": "Seulement si plusieurs PoolManager sont configurés"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "portal_auth_failed": {
+      "message": "Connexion au portail Bayrol refusée : {error}"
+    },
+    "write_refused": {
+      "message": "Le PoolManager a refusé la modification : {error}"
+    },
+    "write_refused_local": {
+      "message": "Le PoolManager a refusé la modification ({error}). En local, les écritures nécessitent l'utilisateur distant de l'appareil : renseignez-le dans les options de l'intégration (ou vos identifiants du portail Bayrol)."
+    },
+    "write_failed": {
+      "message": "Impossible d'envoyer la modification au PoolManager : {error}"
+    },
+    "no_device": {
+      "message": "Aucun PoolManager n'est configuré"
+    },
+    "nothing_to_change": {
+      "message": "Rien à modifier : indiquez start, end, mode ou days"
+    }
+  }
+}

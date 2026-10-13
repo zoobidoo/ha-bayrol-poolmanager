@@ -1,0 +1,22 @@
+# READ-ONLY alternative without this integration: the PoolManager 5 local XML interface
+# (documented by Bayrol in its "XML Data Protocol" specification).
+# Replace 192.168.1.XX with your PoolManager's IP address, then add to configuration.yaml.
+rest:
+  - resource: http://192.168.1.XX/cgi-bin/webgui.fcgi?xmlitem=34.4001
+    scan_interval: 60
+    sensor:
+      - name: Pool pH (local XML)
+        value_template: '{{ value_json.pm5.item["@value"] }}'
+  - resource: http://192.168.1.XX/cgi-bin/webgui.fcgi?xmlitem=34.4022
+    scan_interval: 60
+    sensor:
+      - name: Pool redox (local XML)
+        unit_of_measurement: mV
+        value_template: '{{ value_json.pm5.item["@value"] }}'
+  - resource: http://192.168.1.XX/cgi-bin/webgui.fcgi?xmlitem=34.4033
+    scan_interval: 60
+    sensor:
+      - name: Pool temperature (local XML)
+        unit_of_measurement: "°C"
+        device_class: temperature
+        value_template: '{{ value_json.pm5.item["@value"] }}'

@@ -1,0 +1,37 @@
+# Entity ids depend on your Home Assistant language: adjust them if needed.
+type: vertical-stack
+cards:
+  - type: glance
+    title: Pool
+    entities:
+      - entity: sensor.poolmanager_ph
+        name: pH
+      - entity: sensor.poolmanager_redox
+        name: Redox
+      - entity: sensor.poolmanager_water_temperature
+        name: Water
+      - entity: binary_sensor.poolmanager_filter_pump
+        name: Pump
+  - type: entities
+    title: Filtration
+    entities:
+      - select.poolmanager_filter_pump_mode
+      - sensor.poolmanager_scheduled_filtration_today
+      - type: section
+        label: Interval 1
+      - time.poolmanager_interval_1_start
+      - time.poolmanager_interval_1_end
+      - select.poolmanager_interval_1_mode
+      - select.poolmanager_interval_1_days
+      - type: section
+        label: Interval 2
+      - time.poolmanager_interval_2_start
+      - time.poolmanager_interval_2_end
+      - select.poolmanager_interval_2_mode
+      - select.poolmanager_interval_2_days
+      - type: section
+        label: Other intervals
+      - sensor.poolmanager_interval_3
+      - sensor.poolmanager_interval_4
+      - sensor.poolmanager_interval_5
+      - sensor.poolmanager_interval_6

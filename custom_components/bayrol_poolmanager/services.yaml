@@ -1,0 +1,44 @@
+set_timer_interval:
+  fields:
+    interval:
+      required: true
+      example: 1
+      selector:
+        number:
+          min: 1
+          max: 6
+          mode: box
+    start:
+      example: "10:00:00"
+      selector:
+        time:
+    end:
+      example: "18:00:00"
+      selector:
+        time:
+    mode:
+      selector:
+        select:
+          translation_key: interval_mode
+          options:
+            - "off"
+            - normal
+            - eco
+            - increased
+    days:
+      selector:
+        select:
+          multiple: true
+          translation_key: weekday
+          options:
+            - mon
+            - tue
+            - wed
+            - thu
+            - fri
+            - sat
+            - sun
+    entry_id:
+      selector:
+        config_entry:
+          integration: bayrol_poolmanager

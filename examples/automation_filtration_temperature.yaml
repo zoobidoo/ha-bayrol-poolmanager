@@ -1,0 +1,36 @@
+# Adjusts the daily filtration time to the water temperature every morning.
+# Rule of thumb (not a Bayrol recommendation): hours per day ≈ water temperature (°C) / 2,
+# clamped between 4 h and 14 h. Interval 2 (e.g. a night slot) is kept as is; interval 1 keeps its
+# start time and its end time is recalculated to make up the total.
+# Entity ids depend on your Home Assistant language: adjust them if needed.
+alias: Pool – filtration time from water temperature
+mode: single
+triggers:
+  - trigger: time
+    at: "07:00:00"
+conditions:
+  - condition: state
+    entity_id: select.poolmanager_filter_pump_mode
+    state: auto
+actions:
+  - variables:
+      temp: "{{ states('sensor.poolmanager_water_temperature') | float(0) }}"
+      total_h: "{{ [[(temp / 2) | round(0), 4] | max, 14] | min }}"
+      night_h: "{{ state_attr('sensor.poolmanager_interval_2', 'duration_h') | float(0) if state_attr('sensor.poolmanager_interval_2', 'active') else 0 }}"
+      day_h: "{{ [total_h - night_h, 1] | max }}"
+      start: "{{ states('time.poolmanager_interval_1_start') }}"
+      end: >-
+        {% set s = today_at(start) %}
+        {{ (s + timedelta(hours=day_h)).strftime('%H:%M:00') }}
+  - condition: template
+    value_template: "{{ temp > 5 and end != states('time.poolmanager_interval_1_end') }}"
+  - action: bayrol_poolmanager.set_timer_interval
+    data:
+      interval: 1
+      end: "{{ end }}"
+  - action: persistent_notification.create
+    data:
+      title: Pool
+      message: >-
+        Water at {{ temp }} °C → {{ total_h | int }} h of filtration:
+        interval 1 {{ start[:5] }}–{{ end[:5] }}{% if night_h %} + night {{ night_h }} h{% endif %}.

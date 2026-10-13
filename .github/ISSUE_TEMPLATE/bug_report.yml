@@ -1,0 +1,45 @@
+name: Bug report / other PoolManager model
+description: Something does not work, or your PoolManager model is not fully supported
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks! Please attach the **diagnostics** file (device page → ⋮ → Download diagnostics).
+        Credentials and identifiers are redacted automatically, but have a quick look before posting.
+  - type: input
+    id: model
+    attributes:
+      label: PoolManager model and firmware
+      description: Shown on the portal device list, e.g. "PoolManager Chlorine (Cl) v221216-M1 (7.8.3)"
+    validations:
+      required: true
+  - type: dropdown
+    id: connection
+    attributes:
+      label: Connection
+      options: [Local network, Local reads + cloud writes, Cloud portal]
+    validations:
+      required: true
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant version
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened, and what did you expect?
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant log lines (custom_components.bayrol_poolmanager)
+      render: text
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics file
+      description: Drag and drop the diagnostics JSON here.

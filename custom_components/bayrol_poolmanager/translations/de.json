@@ -1,0 +1,224 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "PoolManager",
+        "description": "Wie soll Home Assistant den PoolManager erreichen? Lokal wird empfohlen: die Messwerte bleiben in Ihrem Netzwerk.",
+        "menu_options": {
+          "local": "Lokales Netzwerk (IP-Adresse)",
+          "cloud": "Bayrol-Portal (bayrol-poolaccess.de)"
+        }
+      },
+      "cloud": {
+        "title": "Bayrol-Portal",
+        "description": "Ihre Zugangsdaten für bayrol-poolaccess.de. Die Geräte-ID wird automatisch erkannt; es ist die Zahl nach `c=` in der Portal-Adresse, wenn Sie das Gerät öffnen (…/device.php?c=12345).",
+        "data": {
+          "username": "Portal-E-Mail",
+          "password": "Portal-Passwort",
+          "device_id": "Geräte-ID (leer = automatisch)",
+          "access_code": "Customer-Zugangscode (optional)"
+        }
+      },
+      "local": {
+        "title": "Lokales Netzwerk",
+        "description": "IP-Adresse des PoolManagers in Ihrem Netzwerk (Client-Liste des Routers oder Gerätemenü Communication & Interfaces → Network (IP) Configuration). Lesen funktioniert sofort; für Änderungen siehe die Optionen der Integration.",
+        "data": {
+          "host": "IP-Adresse des PoolManagers",
+          "access_code": "Customer-Zugangscode (optional)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Das Bayrol-Portal hat die Zugangsdaten abgelehnt",
+      "cannot_connect": "PoolManager nicht erreichbar (Details im Home-Assistant-Protokoll)",
+      "no_data": "Verbunden, aber keine Messwerte empfangen",
+      "remote_login_failed": "Der PoolManager hat den Fernzugriffs-Benutzer abgelehnt (Name und Passwort im Gerätemenü User management prüfen)"
+    },
+    "abort": {
+      "already_configured": "Dieser PoolManager ist bereits eingerichtet"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Optionen",
+        "description": "Lokale Einträge sind schreibgeschützt, bis Schreibzugriffe aktiviert werden. Geben Sie entweder den Fernzugriffs-Benutzer des Geräts an (lokales Schreiben, empfohlen) oder Ihre Bayrol-Portal-Zugangsdaten (Schreiben über das Portal; Lesen bleibt lokal).",
+        "data": {
+          "scan_interval": "Abfrageintervall (Sekunden)",
+          "remote_user": "Fernzugriffs-Benutzer (Gerätemenü User management)",
+          "remote_password": "Passwort des Fernzugriffs-Benutzers",
+          "username": "Bayrol-Portal-E-Mail (Schreiben über das Portal)",
+          "password": "Bayrol-Portal-Passwort",
+          "device_id": "Geräte-ID (leer = automatisch)"
+        }
+      }
+    },
+    "error": {
+      "invalid_auth": "Das Bayrol-Portal hat die Zugangsdaten abgelehnt",
+      "cannot_connect": "PoolManager nicht erreichbar (Details im Home-Assistant-Protokoll)",
+      "no_data": "Verbunden, aber keine Messwerte empfangen",
+      "remote_login_failed": "Der PoolManager hat den Fernzugriffs-Benutzer abgelehnt (Name und Passwort im Gerätemenü User management prüfen)"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "ph": {
+        "name": "pH"
+      },
+      "redox": {
+        "name": "Redox"
+      },
+      "water_temperature": {
+        "name": "Wassertemperatur"
+      },
+      "ph_setpoint": {
+        "name": "pH-Sollwert"
+      },
+      "redox_setpoint": {
+        "name": "Redox-Sollwert"
+      },
+      "pump_status": {
+        "name": "Status Filterpumpe",
+        "state": {
+          "running": "Läuft",
+          "stopped": "Gestoppt",
+          "warning": "Warnung",
+          "error": "Fehler"
+        }
+      },
+      "dosing_ph_status": {
+        "name": "Status pH-Dosierung"
+      },
+      "dosing_chlorine_status": {
+        "name": "Status Chlor-Dosierung"
+      },
+      "daily_filtration": {
+        "name": "Geplante Filterzeit heute"
+      },
+      "interval_summary": {
+        "name": "Intervall {n}"
+      }
+    },
+    "binary_sensor": {
+      "pump_running": {
+        "name": "Filterpumpe"
+      },
+      "alarm": {
+        "name": "Sammelalarm"
+      },
+      "no_flow": {
+        "name": "Alarm kein Durchfluss"
+      }
+    },
+    "select": {
+      "pump_mode": {
+        "name": "Betriebsart Filterpumpe",
+        "state": {
+          "auto": "Auto (Zeitschaltuhr)",
+          "on": "Dauerbetrieb",
+          "off": "Aus"
+        }
+      },
+      "interval_mode": {
+        "name": "Intervall {n} – Modus",
+        "state": {
+          "off": "Pumpe aus",
+          "normal": "Normal",
+          "eco": "Eco",
+          "increased": "Erhöht"
+        }
+      },
+      "interval_days": {
+        "name": "Intervall {n} – Tage",
+        "state": {
+          "every_day": "Täglich",
+          "weekdays": "Mo–Fr",
+          "weekend": "Wochenende",
+          "none": "Keine (deaktiviert)",
+          "custom": "Benutzerdefiniert"
+        }
+      }
+    },
+    "time": {
+      "interval_start": {
+        "name": "Intervall {n} – Start"
+      },
+      "interval_end": {
+        "name": "Intervall {n} – Ende"
+      }
+    }
+  },
+  "selector": {
+    "interval_mode": {
+      "options": {
+        "off": "Pumpe aus",
+        "normal": "Normal",
+        "eco": "Eco",
+        "increased": "Erhöht"
+      }
+    },
+    "weekday": {
+      "options": {
+        "mon": "Montag",
+        "tue": "Dienstag",
+        "wed": "Mittwoch",
+        "thu": "Donnerstag",
+        "fri": "Freitag",
+        "sat": "Samstag",
+        "sun": "Sonntag"
+      }
+    }
+  },
+  "services": {
+    "set_timer_interval": {
+      "name": "Filterintervall einstellen",
+      "description": "Ändert ein Intervall der Filterpumpen-Zeitschaltuhr. Nur angegebene Felder werden geändert.",
+      "fields": {
+        "interval": {
+          "name": "Intervall",
+          "description": "1–6"
+        },
+        "start": {
+          "name": "Start",
+          "description": "Einschaltzeit"
+        },
+        "end": {
+          "name": "Ende",
+          "description": "Ausschaltzeit"
+        },
+        "mode": {
+          "name": "Modus",
+          "description": "Pumpenmodus während des Intervalls"
+        },
+        "days": {
+          "name": "Tage",
+          "description": "Aktive Tage (leere Liste deaktiviert das Intervall)"
+        },
+        "entry_id": {
+          "name": "PoolManager",
+          "description": "Nur nötig, wenn mehrere PoolManager eingerichtet sind"
+        }
+      }
+    }
+  },
+  "exceptions": {
+    "portal_auth_failed": {
+      "message": "Anmeldung am Bayrol-Portal fehlgeschlagen: {error}"
+    },
+    "write_refused": {
+      "message": "Der PoolManager hat die Änderung abgelehnt: {error}"
+    },
+    "write_refused_local": {
+      "message": "Der PoolManager hat die Änderung abgelehnt ({error}). Lokales Schreiben benötigt den Fernzugriffs-Benutzer des Geräts: in den Optionen der Integration eintragen (oder die Bayrol-Portal-Zugangsdaten)."
+    },
+    "write_failed": {
+      "message": "Änderung konnte nicht an den PoolManager gesendet werden: {error}"
+    },
+    "no_device": {
+      "message": "Kein PoolManager eingerichtet"
+    },
+    "nothing_to_change": {
+      "message": "Nichts zu ändern: start, end, mode oder days angeben"
+    }
+  }
+}
