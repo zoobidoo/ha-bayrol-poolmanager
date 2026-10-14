@@ -2,6 +2,7 @@
 
 [![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/docs/faq/custom_repositories)
 [![Validate](https://github.com/zoobidoo/ha-bayrol-poolmanager/actions/workflows/validate.yml/badge.svg)](https://github.com/zoobidoo/ha-bayrol-poolmanager/actions/workflows/validate.yml)
+[![Buy Me a Coffee](https://img.shields.io/badge/Buy%20me%20a%20coffee-support-FFDD00?logo=buymeacoffee&logoColor=black)](https://buymeacoffee.com/zoobidoo)
 [![Tests](https://github.com/zoobidoo/ha-bayrol-poolmanager/actions/workflows/tests.yml/badge.svg)](https://github.com/zoobidoo/ha-bayrol-poolmanager/actions/workflows/tests.yml)
 
 *[Version française](README.fr.md)*
@@ -207,7 +208,7 @@ This project is maintained on my spare time; response times may vary.
 If this integration saves you a few trips to the pump room, you can say thanks:
 
 - **GitHub Sponsors:** the ❤️ *Sponsor* button at the top of this page
-- **Buy Me a Coffee:** *(link coming soon)*
+- **Buy Me a Coffee:** [buymeacoffee.com/zoobidoo](https://buymeacoffee.com/zoobidoo)
 - **Bitcoin:** `(address coming soon)`
 - **Ethereum / USDC (EVM: Ethereum, Base, Arbitrum…):** `(address coming soon)`
 

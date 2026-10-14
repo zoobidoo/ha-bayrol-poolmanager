@@ -134,8 +134,8 @@ Le tableau complet des identifiants figure dans le [README anglais](README.md#ho
 
 ## Soutenir le projet
 
-Voir la section [Support the project](README.md#support-the-project) : GitHub Sponsors, Buy Me a
-Coffee, Bitcoin, Ethereum/USDC. Les signalements de bugs et les contributions comptent tout autant.
+Voir la section [Support the project](README.md#support-the-project) : GitHub Sponsors,
+[Buy Me a Coffee](https://buymeacoffee.com/zoobidoo), Bitcoin, Ethereum/USDC. Les signalements de bugs et les contributions comptent tout autant.
 
 ## Licence
 
