@@ -207,10 +207,10 @@ This project is maintained on my spare time; response times may vary.
 
 If this integration saves you a few trips to the pump room, you can say thanks:
 
-- **GitHub Sponsors:** the ❤️ *Sponsor* button at the top of this page
+- **GitHub Sponsors:** coming soon (the ❤️ *Sponsor* button at the top of this page lists all options)
 - **Buy Me a Coffee:** [buymeacoffee.com/zoobidoo](https://buymeacoffee.com/zoobidoo)
-- **Bitcoin:** `(address coming soon)`
-- **Ethereum / USDC (EVM: Ethereum, Base, Arbitrum…):** `(address coming soon)`
+- **Crypto (EVM: ETH, USDC… on Ethereum, Base, Arbitrum, Optimism…):**
+  `0x3D7FC7EEb2375b71C3156De836A0866059C65697`
 
 Totally optional: bug reports and pull requests are just as valuable.
 
