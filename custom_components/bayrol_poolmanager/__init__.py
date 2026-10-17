@@ -10,9 +10,10 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME, Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
-from homeassistant.helpers import config_validation as cv
+from homeassistant.exceptions import ServiceValidationError
+from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
+from homeassistant.helpers.typing import ConfigType
 
 from .api import BayrolClient
 from .const import (
@@ -33,9 +34,12 @@ from .coordinator import BayrolCoordinator
 
 PLATFORMS = [Platform.SENSOR, Platform.BINARY_SENSOR, Platform.SELECT, Platform.TIME]
 
+CONFIG_SCHEMA = cv.config_entry_only_config_schema(DOMAIN)
+
 SERVICE_SET_INTERVAL = "set_timer_interval"
 SERVICE_SCHEMA = vol.Schema(
     {
+        vol.Optional("device_id"): cv.string,
         vol.Optional("entry_id"): cv.string,
         vol.Required("interval"): vol.All(vol.Coerce(int), vol.Range(min=1, max=6)),
         vol.Optional("start"): cv.time,
@@ -54,8 +58,48 @@ def _fmt(t: time) -> str:
 
 def _session(hass: HomeAssistant) -> aiohttp.ClientSession:
     # Dedicated session: the portal relies on cookies, and the local device is
-    # addressed by IP (unsafe cookie jar needed).
+    # addressed by IP (unsafe cookie jar needed). Created during entry setup,
+    # it is detached automatically when the entry is unloaded.
     return async_create_clientsession(hass, cookie_jar=aiohttp.CookieJar(unsafe=True))
+
+
+async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
+    """Register the integration's actions."""
+
+    async def _handle_set_interval(call: ServiceCall) -> None:
+        coord = _target(hass, call)
+        ids = TIMER_INTERVALS[call.data["interval"]]
+        values: dict[str, str] = {}
+        if "start" in call.data:
+            values[ids["on"]] = _fmt(call.data["start"])
+        if "end" in call.data:
+            values[ids["off"]] = _fmt(call.data["end"])
+        if "mode" in call.data:
+            values[ids["mode"]] = str(INTERVAL_MODES[call.data["mode"]])
+        if "days" in call.data:
+            mask = sum(1 << WEEKDAYS.index(d) for d in set(call.data["days"]))
+            values[ids["days"]] = str(mask)
+        if not values:
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="nothing_to_change")
+        await coord.async_write(values)
+
+    hass.services.async_register(DOMAIN, SERVICE_SET_INTERVAL, _handle_set_interval, schema=SERVICE_SCHEMA)
+    return True
+
+
+def _target(hass: HomeAssistant, call: ServiceCall) -> BayrolCoordinator:
+    """The PoolManager targeted by an action (mandatory when several are configured)."""
+    entries: list[BayrolConfigEntry] = hass.config_entries.async_loaded_entries(DOMAIN)
+    if entry_id := call.data.get("entry_id"):
+        entries = [e for e in entries if e.entry_id == entry_id]
+    elif device_id := call.data.get("device_id"):
+        device = dr.async_get(hass).async_get(device_id)
+        entries = [e for e in entries if device and e.entry_id in device.config_entries]
+    elif len(entries) > 1:
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="device_required")
+    if not entries:
+        raise ServiceValidationError(translation_domain=DOMAIN, translation_key="no_device")
+    return entries[0].runtime_data
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry) -> bool:
@@ -83,50 +127,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry) -> bo
             device_id=opts.get(CONF_DEVICE_ID) or None,
             access_code=data.get(CONF_ACCESS_CODE),
         )
-    coordinator = BayrolCoordinator(hass, client, opts.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL), write_client)
+    coordinator = BayrolCoordinator(
+        hass, entry, client, opts.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL), write_client
+    )
     await coordinator.async_config_entry_first_refresh()
     entry.runtime_data = coordinator
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_reload))
 
-    if not hass.services.has_service(DOMAIN, SERVICE_SET_INTERVAL):
-
-        async def _handle_set_interval(call: ServiceCall) -> None:
-            entries = [
-                e
-                for e in hass.config_entries.async_loaded_entries(DOMAIN)
-                if not call.data.get("entry_id") or e.entry_id == call.data["entry_id"]
-            ]
-            if not entries:
-                raise HomeAssistantError(translation_domain=DOMAIN, translation_key="no_device")
-            coord: BayrolCoordinator = entries[0].runtime_data
-            ids = TIMER_INTERVALS[call.data["interval"]]
-            values: dict[str, str] = {}
-            if "start" in call.data:
-                values[ids["on"]] = _fmt(call.data["start"])
-            if "end" in call.data:
-                values[ids["off"]] = _fmt(call.data["end"])
-            if "mode" in call.data:
-                values[ids["mode"]] = str(INTERVAL_MODES[call.data["mode"]])
-            if "days" in call.data:
-                mask = sum(1 << WEEKDAYS.index(d) for d in set(call.data["days"]))
-                values[ids["days"]] = str(mask)
-            if not values:
-                raise ServiceValidationError(translation_domain=DOMAIN, translation_key="nothing_to_change")
-            await coord.async_write(values)
-
-        hass.services.async_register(DOMAIN, SERVICE_SET_INTERVAL, _handle_set_interval, schema=SERVICE_SCHEMA)
-
     return True
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: BayrolConfigEntry) -> bool:
     """Unload a config entry."""
-    unloaded = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    if unloaded and not [e for e in hass.config_entries.async_loaded_entries(DOMAIN) if e.entry_id != entry.entry_id]:
-        hass.services.async_remove(DOMAIN, SERVICE_SET_INTERVAL)
-    return unloaded
+    return await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
 
 async def _async_reload(hass: HomeAssistant, entry: BayrolConfigEntry) -> None:

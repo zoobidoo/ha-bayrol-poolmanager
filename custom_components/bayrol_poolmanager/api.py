@@ -55,6 +55,10 @@ class BayrolWriteRefused(BayrolError):
     """The device rejected a write (status 113: remote user not logged in)."""
 
 
+class BayrolWriteNotApplied(BayrolError):
+    """The device accepted a write but reads back a different value."""
+
+
 class BayrolClient:
     """Access to a PoolManager, either locally or through the cloud portal."""
 
@@ -104,13 +108,32 @@ class BayrolClient:
             return {item: self._cache.get(item) for item in items}
 
     async def async_set(self, values: dict[str, str]) -> None:
-        """Write one or more variables."""
+        """Write one or more variables, then read them back.
+
+        All values go in a single request: the device applies them together
+        (checked on firmware 7.8.3), so e.g. the start and end of an interval
+        are never half-written. Writes are plain assignments, so the automatic
+        retry after a timeout or a lost session cannot do any harm.
+        """
+        values = {item: str(value) for item, value in values.items()}
         async with self._lock:
             if self._access_code:
                 await self._request({"set": {ITEM_LOGIN_CODE: str(self._access_code)}})
-            for item, value in values.items():
-                await self._request({"set": {item: str(value)}})
-                self._cache[item] = str(value)
+            await self._request({"set": values})
+            # Read back. Within a session the device only returns values that
+            # changed since the previous request: a missing item still holds
+            # the value we had cached before the write.
+            before = dict(self._cache)
+            data = await self._request({"get": list(values)})
+            self._cache.update(data)
+            wrong = {
+                item: actual
+                for item, wanted in values.items()
+                if (actual := data.get(item, before.get(item))) is not None and str(actual) != wanted
+            }
+            if wrong:
+                raise BayrolWriteNotApplied(f"The PoolManager kept {wrong}")
+            self._cache.update(values)
 
     async def async_discover_devices(self) -> list[str]:
         """(Cloud) Device ids registered on the portal account."""
@@ -136,7 +159,7 @@ class BayrolClient:
             # The session may have lost its remote login: start a new one once.
             self._reset()
             return await self._request(payload, retry=False)
-        except (BayrolError, aiohttp.ClientError, asyncio.TimeoutError) as err:
+        except (TimeoutError, BayrolError, aiohttp.ClientError) as err:
             if not retry:
                 raise BayrolError(str(err)) from err
             _LOGGER.debug("WebGUI session lost (%s), retrying", err)

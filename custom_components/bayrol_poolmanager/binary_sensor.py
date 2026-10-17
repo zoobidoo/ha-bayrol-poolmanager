@@ -12,7 +12,9 @@ from .coordinator import parse_int
 from .entity import BayrolEntity
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     c = entry.runtime_data
     async_add_entities(
         [

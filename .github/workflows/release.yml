@@ -1,0 +1,36 @@
+name: Release
+
+# Publishes a GitHub release (and its tag) when the version in manifest.json
+# changes on main. Release notes come from the matching CHANGELOG.md section.
+on:
+  push:
+    branches: [main]
+    paths: [custom_components/bayrol_poolmanager/manifest.json]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Create the release if it does not exist yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version=$(jq -r .version custom_components/bayrol_poolmanager/manifest.json)
+          tag="v${version}"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists"; exit 0
+          fi
+          awk -v v="$version" '
+            $0 ~ "^## " v "( |$)" {found=1; next}
+            found && /^## / {exit}
+            found {print}
+          ' CHANGELOG.md > notes.md
+          if [ ! -s notes.md ]; then
+            echo "No CHANGELOG.md section for $version"; exit 1
+          fi
+          gh release create "$tag" --target "$GITHUB_SHA" --title "$tag" --notes-file notes.md

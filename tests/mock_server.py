@@ -18,16 +18,32 @@ LOGIN_FORM = (
 class FakeBayrol:
     def __init__(self) -> None:
         self.values = {
-            "34.4001.value": "7.22", "34.4022.value": "707", "34.4033.value": "24.0",
-            "34.3001.value": "7.20", "34.3049.value": "720",
-            "55.17106.status": "1", "55.17106.opmode": "0", "60.5432.value": "2",
-            "14.16601.mode": "No Flow", "14.16604.mode": "No Flow",
-            "44.2001.value": "0", "44.2003.value": "0",
-            "35.5184.value": "2", "36.5203.value": "127", "40.8533.value": "10:00:00", "40.8536.value": "18:00:00",
+            "34.4001.value": "7.22",
+            "34.4022.value": "707",
+            "34.4033.value": "24.0",
+            "34.3001.value": "7.20",
+            "34.3049.value": "720",
+            "55.17106.status": "1",
+            "55.17106.opmode": "0",
+            "60.5432.value": "2",
+            "14.16601.mode": "No Flow",
+            "14.16604.mode": "No Flow",
+            "44.2001.value": "0",
+            "44.2003.value": "0",
+            "35.5184.value": "2",
+            "36.5203.value": "127",
+            "40.8533.value": "10:00:00",
+            "40.8536.value": "18:00:00",
             "1.1257.value": "Timer interval 1 (Monday - Sunday, 10:00-18:00, Normal mode)",
-            "35.5185.value": "2", "36.5204.value": "127", "40.8534.value": "00:00:00", "40.8537.value": "02:00:00",
+            "35.5185.value": "2",
+            "36.5204.value": "127",
+            "40.8534.value": "00:00:00",
+            "40.8537.value": "02:00:00",
             "1.1258.value": "Timer interval 2 (Monday - Sunday, 00:00-02:00, Normal mode)",
-            "35.5186.value": "1", "36.5205.value": "0", "40.8535.value": "09:00:00", "40.8538.value": "18:00:00",
+            "35.5186.value": "1",
+            "36.5205.value": "0",
+            "40.8535.value": "09:00:00",
+            "40.8538.value": "18:00:00",
             "1.1259.value": "Timer interval 3 (Off)",
         }
         for n, (m, d, on, off, lbl) in {
@@ -35,13 +51,24 @@ class FakeBayrol:
             5: ("35.5188", "36.5207", "40.8540", "40.8543", "1.1261"),
             6: ("35.5189", "36.5208", "40.8541", "40.8544", "1.1262"),
         }.items():
-            self.values.update({m + ".value": "2", d + ".value": "0", on + ".value": "08:00:00", off + ".value": "08:00:00", lbl + ".value": f"Timer interval {n} (Off)"})
+            self.values.update(
+                {
+                    m + ".value": "2",
+                    d + ".value": "0",
+                    on + ".value": "08:00:00",
+                    off + ".value": "08:00:00",
+                    lbl + ".value": f"Timer interval {n} (Off)",
+                }
+            )
         self.sessions: dict[str, dict] = {}  # sid -> {"last": {item: value}, "level": int}
         self.logged_cookies: set[str] = set()
         self.writes: list[tuple[str, str]] = []
         self.pm5_calls = 0
         self.expire_all = False
         self.prefill = True  # the portal pre-fills the remote user
+        self.password = PASSWORD
+        self.ignore = set()  # items whose writes are accepted but not applied
+        self.set_requests: list[dict] = []
 
     def app(self) -> web.Application:
         app = web.Application()
@@ -70,11 +97,17 @@ class FakeBayrol:
         return request.cookies.get("PHPSESSID") in self.logged_cookies
 
     async def login_page(self, request):
-        return web.Response(text='<form action="login.php?r=reg" method="post"><input name="username"><input type="password" name="password"></form>', content_type="text/html")
+        return web.Response(
+            text=(
+                '<form action="login.php?r=reg" method="post"><input name="username">'
+                '<input type="password" name="password"></form>'
+            ),
+            content_type="text/html",
+        )
 
     async def login_post(self, request):
         form = await request.post()
-        if form.get("username") == USER and form.get("password") == PASSWORD:
+        if form.get("username") == USER and form.get("password") == self.password:
             cookie = secrets.token_hex(8)
             self.logged_cookies.add(cookie)
             resp = web.HTTPFound("/webview/p/plants.php")
@@ -85,7 +118,10 @@ class FakeBayrol:
     async def plants(self, request):
         if not self._authed(request):
             raise web.HTTPFound("/webview/p/login.php")
-        return web.Response(text=f'<a href="plant_settings.php?c={DEVICE}">Device data</a><script>var clients = [{DEVICE}];</script>', content_type="text/html")
+        return web.Response(
+            text=f'<a href="plant_settings.php?c={DEVICE}">Device data</a><script>var clients = [{DEVICE}];</script>',
+            content_type="text/html",
+        )
 
     async def device(self, request):
         if not self._authed(request):
@@ -100,7 +136,9 @@ class FakeBayrol:
         self.pm5_calls += 1
         sid = secrets.token_hex(16)
         self.sessions[sid] = {"last": {}, "level": 1, "remote": False}
-        return web.Response(text=f"<script>wui.init('{sid}',false);\n    wui.write(3,'9.17401.0')</script>", content_type="text/html")
+        return web.Response(
+            text=f"<script>wui.init('{sid}',false);\n    wui.write(3,'9.17401.0')</script>", content_type="text/html"
+        )
 
     async def fcgi(self, request):
         sid = request.query.get("sid")
@@ -116,10 +154,17 @@ class FakeBayrol:
             sets = {k: str(v).strip() for k, v in body["set"].items()}
             if "9.17401.user" in sets:
                 sess["remote"] = (sets["9.17401.user"], sets.get("9.17401.pass")) == (REMOTE_USER, REMOTE_PASS)
-                return web.Response(text=json.dumps({"data": {}, "status": {"code": 0}, "event": {"type": 1, "data": "3.16901.0"}}))
+                return web.Response(
+                    text=json.dumps({"data": {}, "status": {"code": 0}, "event": {"type": 1, "data": "3.16901.0"}})
+                )
             if not sess["remote"]:
-                return web.Response(text=json.dumps({"data": {}, "status": {"code": 113}, "event": {"type": 0, "data": "3.16901.0"}}))
+                return web.Response(
+                    text=json.dumps({"data": {}, "status": {"code": 113}, "event": {"type": 0, "data": "3.16901.0"}})
+                )
+            self.set_requests.append(sets)
             for k, v in sets.items():
+                if k in self.ignore:
+                    continue
                 if k == "42.8028.code":
                     sess["level"] = 2 if v == "0000" else 1
                 else:

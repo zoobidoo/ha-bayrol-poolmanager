@@ -8,8 +8,8 @@ import sys
 import types
 
 import aiohttp
-import pytest
 from aiohttp.test_utils import TestServer
+import pytest
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -44,7 +44,9 @@ async def fake(socket_enabled):
 
 def _client(base, **kw):
     session = aiohttp.ClientSession(cookie_jar=aiohttp.CookieJar(unsafe=True))
-    c = api.BayrolClient(session, username=kw.get("u", USER), password=kw.get("p", PASSWORD), access_code=kw.get("code"))
+    c = api.BayrolClient(
+        session, username=kw.get("u", USER), password=kw.get("p", PASSWORD), access_code=kw.get("code")
+    )
     c._base = base
     return c, session
 

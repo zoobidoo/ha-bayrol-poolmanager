@@ -26,6 +26,24 @@
           "host": "IP-Adresse des PoolManagers",
           "access_code": "Customer-Zugangscode (optional)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Anmeldung Bayrol-Portal",
+        "description": "Das Bayrol-Portal hat die gespeicherten Zugangsdaten abgelehnt. Geben Sie Ihre E-Mail für bayrol-poolaccess.de und das aktuelle Passwort ein.",
+        "data": {
+          "username": "Portal-E-Mail",
+          "password": "Portal-Passwort"
+        }
+      },
+      "reconfigure": {
+        "title": "Neu konfigurieren",
+        "description": "Lokal: neue IP-Adresse des PoolManagers. Portal: neue Zugangsdaten. Entitäten und ihr Verlauf bleiben erhalten.",
+        "data": {
+          "host": "IP-Adresse des PoolManagers",
+          "username": "Portal-E-Mail",
+          "password": "Portal-Passwort",
+          "access_code": "Customer-Zugangscode (optional)"
+        }
       }
     },
     "error": {
@@ -35,7 +53,9 @@
       "remote_login_failed": "Der PoolManager hat den Fernzugriffs-Benutzer abgelehnt (Name und Passwort im Gerätemenü User management prüfen)"
     },
     "abort": {
-      "already_configured": "Dieser PoolManager ist bereits eingerichtet"
+      "already_configured": "Dieser PoolManager ist bereits eingerichtet",
+      "reauth_successful": "Zugangsdaten aktualisiert",
+      "reconfigure_successful": "Konfiguration aktualisiert"
     }
   },
   "options": {
@@ -195,8 +215,12 @@
           "description": "Aktive Tage (leere Liste deaktiviert das Intervall)"
         },
         "entry_id": {
+          "name": "Konfigurationseintrag",
+          "description": "Alternative zum Gerät (aus Kompatibilitätsgründen)"
+        },
+        "device_id": {
           "name": "PoolManager",
-          "description": "Nur nötig, wenn mehrere PoolManager eingerichtet sind"
+          "description": "Zu änderndes Gerät (Pflicht, wenn mehrere PoolManager eingerichtet sind)"
         }
       }
     }
@@ -215,10 +239,22 @@
       "message": "Änderung konnte nicht an den PoolManager gesendet werden: {error}"
     },
     "no_device": {
-      "message": "Kein PoolManager eingerichtet"
+      "message": "Kein passender PoolManager eingerichtet"
     },
     "nothing_to_change": {
       "message": "Nichts zu ändern: start, end, mode oder days angeben"
+    },
+    "device_required": {
+      "message": "Mehrere PoolManager sind eingerichtet: Wählen Sie das zu ändernde Gerät"
+    },
+    "custom_days": {
+      "message": "„Benutzerdefiniert“ zeigt nur eine Tageskombination ohne Vorgabe an. Verwenden Sie die Aktion bayrol_poolmanager.set_timer_interval, um beliebige Tage zu wählen."
+    },
+    "empty_interval": {
+      "message": "Intervall {n} würde zur selben Uhrzeit beginnen und enden, obwohl es aktiv ist. Ändern Sie Beginn oder Ende, oder deaktivieren Sie das Intervall (Tage: keine, oder Modus: Pumpe aus)."
+    },
+    "write_not_applied": {
+      "message": "Der PoolManager hat die Änderung angenommen, aber nicht übernommen: {error}"
     }
   }
 }

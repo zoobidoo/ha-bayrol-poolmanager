@@ -26,6 +26,24 @@
           "host": "Adresse IP du PoolManager",
           "access_code": "Code d'accès Customer (facultatif)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Connexion au portail Bayrol",
+        "description": "Le portail Bayrol a refusé les identifiants enregistrés. Saisissez votre e-mail bayrol-poolaccess.de et le mot de passe actuel.",
+        "data": {
+          "username": "E-mail du portail",
+          "password": "Mot de passe du portail"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigurer",
+        "description": "Local : nouvelle adresse IP du PoolManager. Portail : nouveaux identifiants. Les entités et leur historique sont conservés.",
+        "data": {
+          "host": "Adresse IP du PoolManager",
+          "username": "E-mail du portail",
+          "password": "Mot de passe du portail",
+          "access_code": "Code d'accès Customer (facultatif)"
+        }
       }
     },
     "error": {
@@ -35,7 +53,9 @@
       "remote_login_failed": "Le PoolManager a refusé l'utilisateur distant (vérifiez nom et mot de passe dans le menu User management de l'appareil)"
     },
     "abort": {
-      "already_configured": "Ce PoolManager est déjà configuré"
+      "already_configured": "Ce PoolManager est déjà configuré",
+      "reauth_successful": "Identifiants mis à jour",
+      "reconfigure_successful": "Configuration mise à jour"
     }
   },
   "options": {
@@ -195,8 +215,12 @@
           "description": "Jours actifs (liste vide = plage désactivée)"
         },
         "entry_id": {
+          "name": "Entrée de configuration",
+          "description": "Alternative à l'appareil (conservée pour compatibilité)"
+        },
+        "device_id": {
           "name": "PoolManager",
-          "description": "Seulement si plusieurs PoolManager sont configurés"
+          "description": "Appareil à modifier (obligatoire si plusieurs PoolManager sont configurés)"
         }
       }
     }
@@ -215,10 +239,22 @@
       "message": "Impossible d'envoyer la modification au PoolManager : {error}"
     },
     "no_device": {
-      "message": "Aucun PoolManager n'est configuré"
+      "message": "Aucun PoolManager correspondant n'est configuré"
     },
     "nothing_to_change": {
       "message": "Rien à modifier : indiquez start, end, mode ou days"
+    },
+    "device_required": {
+      "message": "Plusieurs PoolManager sont configurés : choisissez l'appareil à modifier"
+    },
+    "custom_days": {
+      "message": "« Personnalisé » indique seulement une combinaison de jours sans préréglage. Utilisez l'action bayrol_poolmanager.set_timer_interval pour choisir des jours quelconques."
+    },
+    "empty_interval": {
+      "message": "La plage {n} commencerait et finirait à la même heure alors qu'elle est active. Modifiez le début ou la fin, ou désactivez la plage (jours : aucun, ou mode : pompe arrêtée)."
+    },
+    "write_not_applied": {
+      "message": "Le PoolManager a accepté la modification sans l'appliquer : {error}"
     }
   }
 }

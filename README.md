@@ -39,6 +39,12 @@ directly on your local network or through the Bayrol cloud portal (bayrol-poolac
 An action, `bayrol_poolmanager.set_timer_interval`, changes one interval in a single call (any
 combination of `start`, `end`, `mode` and `days`, with arbitrary days of the week).
 
+> [!CAUTION]
+> **Filter pump mode.** *Off* stops the filter pump until you switch it back: no circulation, and the
+> PoolManager stops chemical dosing without flow. *Forced on* runs the pump continuously. Both
+> override the timer. If you automate this entity, always plan the return to *Auto (timer)*, for
+> example an automation that switches back after a few hours.
+
 Diagnostics can be downloaded from the device page (credentials and identifiers are redacted).
 
 ## Compatibility
@@ -114,6 +120,13 @@ The *Device data* link (`plant_settings.php?c=12345`) shows the same number.
 > Browsers sometimes auto-fill the **Home Assistant** login into the e-mail/password fields of this
 > form. Double-check that they contain your **Bayrol** credentials before submitting.
 
+### Changing the settings later
+
+- **New IP address, new portal password:** integration page → ⋮ → **Reconfigure**. The entry, its
+  entities and their history are kept.
+- **Portal password rejected:** Home Assistant shows a *re-authentication* notification
+  (Settings → Devices & services); enter the new password there.
+
 ## Usage examples
 
 Change interval 1 to 10:00–18:00, every day:
@@ -121,12 +134,20 @@ Change interval 1 to 10:00–18:00, every day:
 ```yaml
 action: bayrol_poolmanager.set_timer_interval
 data:
+  # device_id: required only if you have several PoolManagers
   interval: 1
   start: "10:00:00"
   end: "18:00:00"
   days: [mon, tue, wed, thu, fri, sat, sun]
   mode: normal
 ```
+
+Rules applied before anything is sent:
+
+- An **active** interval cannot start and end at the same time (would it mean 0 h or 24 h?). Unused
+  intervals are stored by the device with start = end and no day: that is fine.
+- Intervals may cross midnight (e.g. 22:00–02:00). Overlapping intervals are accepted: the pump runs
+  whenever at least one interval is active.
 
 The [`examples/`](examples/) folder contains:
 
@@ -158,6 +179,11 @@ POST /cgi-bin/webgui.fcgi?sid=<session id>
 - Within a session, the device only returns values that **changed** since the previous request: the
   integration keeps a cache and opens a fresh session every 30 minutes.
 - The integration polls every 60 s by default (configurable, minimum 30 s).
+- A change is sent as **one** request (e.g. start and end of an interval together), then read back:
+  if the device kept another value, Home Assistant reports an error. Writes are plain value
+  assignments, so the automatic retry after a timeout is harmless.
+- The manifest declares `local_polling`, the recommended mode. In cloud mode the data actually comes
+  from the vendor portal (cloud polling).
 
 Main identifiers (PoolManager 5 Chlorine, firmware 7.8.3):
 
@@ -172,6 +198,17 @@ Main identifiers (PoolManager 5 Chlorine, firmware 7.8.3):
 | `40.8536/8537/8538/8542/8543/8544` | End of intervals 1–6 | `HH:MM:SS` |
 | `9.17401.user` / `9.17401.pass` | Remote access login | |
 
+## Security notes
+
+- **Local mode uses plain `http://`:** the PoolManager has no HTTPS. On your network, readings and
+  the remote user's credentials travel unencrypted. Keep the device on a trusted network (or a
+  dedicated VLAN) and never expose it to the Internet.
+- **Credentials** (portal password, remote user password) are stored by Home Assistant in
+  `.storage/core.config_entries`, like for any integration. They are redacted from diagnostics.
+- **Write test:** when you enter a remote user in the options, the integration writes the current
+  start time of interval 6 back to the device (same value, nothing changes) to check that writes are
+  accepted.
+
 ## Troubleshooting
 
 | Symptom | Cause / fix |
@@ -179,6 +216,9 @@ Main identifiers (PoolManager 5 Chlorine, firmware 7.8.3):
 | "The PoolManager refused the change (status 113)" | No remote user logged in. Local entry: set the remote user or the portal credentials in the options. Cloud entry: check that the portal account has remote access to the device. |
 | "Cannot reach the PoolManager" while setting up the cloud option | Check the e-mail/password (browser auto-fill!) and the device id. The exact reason is in the Home Assistant log (`custom_components.bayrol_poolmanager`). |
 | Values stay unavailable | Check `http://<IP>/cgi-bin/webgui.fcgi?xmlitem=34.4001` from the Home Assistant host. |
+| "Several PoolManagers are configured: choose the device" | Add `device_id` to the `set_timer_interval` action. |
+| "Interval N would start and end at the same time" | Change the start or end, or disable the interval (days: none, or mode: pump off). |
+| "The PoolManager accepted the change but did not apply it" | The device kept its previous value (e.g. a setting locked on the device). Check it on the touch screen. |
 | Pump shows "stopped" during an active interval | A timer change that happens *during* an interval may only take effect at the next switch-on time. |
 
 Enable debug logs:

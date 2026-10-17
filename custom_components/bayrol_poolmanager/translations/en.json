@@ -26,6 +26,24 @@
           "host": "PoolManager IP address",
           "access_code": "Customer access code (optional)"
         }
+      },
+      "reauth_confirm": {
+        "title": "Bayrol portal login",
+        "description": "The Bayrol portal rejected the saved credentials. Enter your bayrol-poolaccess.de e-mail and current password.",
+        "data": {
+          "username": "Portal e-mail",
+          "password": "Portal password"
+        }
+      },
+      "reconfigure": {
+        "title": "Reconfigure",
+        "description": "Local: new IP address of the PoolManager. Cloud: new portal credentials. Entities and their history are kept.",
+        "data": {
+          "host": "PoolManager IP address",
+          "username": "Portal e-mail",
+          "password": "Portal password",
+          "access_code": "Customer access code (optional)"
+        }
       }
     },
     "error": {
@@ -35,7 +53,9 @@
       "remote_login_failed": "The PoolManager refused the remote user login (check user name and password in the device menu User management)"
     },
     "abort": {
-      "already_configured": "This PoolManager is already configured"
+      "already_configured": "This PoolManager is already configured",
+      "reauth_successful": "Credentials updated",
+      "reconfigure_successful": "Configuration updated"
     }
   },
   "options": {
@@ -195,8 +215,12 @@
           "description": "Active days (empty list disables the interval)"
         },
         "entry_id": {
+          "name": "Config entry",
+          "description": "Alternative to the device (kept for compatibility)"
+        },
+        "device_id": {
           "name": "PoolManager",
-          "description": "Only needed if several PoolManagers are configured"
+          "description": "Device to change (required if several PoolManagers are configured)"
         }
       }
     }
@@ -215,10 +239,22 @@
       "message": "Could not send the change to the PoolManager: {error}"
     },
     "no_device": {
-      "message": "No PoolManager is configured"
+      "message": "No matching PoolManager is configured"
     },
     "nothing_to_change": {
       "message": "Nothing to change: provide start, end, mode or days"
+    },
+    "device_required": {
+      "message": "Several PoolManagers are configured: choose the device to change"
+    },
+    "custom_days": {
+      "message": "\"Custom\" only shows a combination of days without a preset. Use the action bayrol_poolmanager.set_timer_interval to choose arbitrary days."
+    },
+    "empty_interval": {
+      "message": "Interval {n} would start and end at the same time while it is active. Change the start or end, or disable the interval (days: none, or mode: pump off)."
+    },
+    "write_not_applied": {
+      "message": "The PoolManager accepted the change but did not apply it: {error}"
     }
   }
 }

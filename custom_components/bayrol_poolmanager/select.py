@@ -5,12 +5,14 @@ from __future__ import annotations
 from homeassistant.components.select import SelectEntity
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import BayrolConfigEntry
 from .const import (
     DAY_PRESETS,
     DAY_PRESETS_REV,
+    DOMAIN,
     INTERVAL_MODES,
     INTERVAL_MODES_REV,
     ITEM_PUMP_MODE,
@@ -18,11 +20,13 @@ from .const import (
     PUMP_MODES_REV,
     TIMER_INTERVALS,
 )
-from .coordinator import parse_int
+from .coordinator import BayrolCoordinator, parse_int
 from .entity import BayrolEntity, BayrolIntervalEntity
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     c = entry.runtime_data
     entities: list[SelectEntity] = [PumpModeSelect(c)]
     for n in TIMER_INTERVALS:
@@ -31,11 +35,15 @@ async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry, async
 
 
 class PumpModeSelect(BayrolEntity, SelectEntity):
-    """Auto (timer) / forced on / off."""
+    """Auto (timer) / forced on / off.
+
+    "Off" stops filtration, and with it circulation and chemical dosing: see the
+    warning in the README.
+    """
 
     _attr_options = list(PUMP_MODES)
 
-    def __init__(self, coordinator) -> None:
+    def __init__(self, coordinator: BayrolCoordinator) -> None:
         super().__init__(coordinator, "pump_mode")
 
     @property
@@ -73,5 +81,7 @@ class IntervalDaysSelect(BayrolIntervalEntity, SelectEntity):
 
     async def async_select_option(self, option: str) -> None:
         if option == "custom":
-            return
+            # "custom" only reports a combination of days without a preset;
+            # arbitrary days are set with the set_timer_interval action.
+            raise ServiceValidationError(translation_domain=DOMAIN, translation_key="custom_days")
         await self.coordinator.async_write({TIMER_INTERVALS[self.number]["days"]: str(DAY_PRESETS[option])})

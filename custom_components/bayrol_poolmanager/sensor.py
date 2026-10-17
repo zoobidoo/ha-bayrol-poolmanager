@@ -62,19 +62,62 @@ class BayrolSensorDescription(SensorEntityDescription):
 
 
 SENSORS: tuple[BayrolSensorDescription, ...] = (
-    BayrolSensorDescription(key="ph", value_fn=_float(ITEM_PH), state_class=SensorStateClass.MEASUREMENT, device_class=SensorDeviceClass.PH, suggested_display_precision=2),
-    BayrolSensorDescription(key="redox", value_fn=_float(ITEM_REDOX), state_class=SensorStateClass.MEASUREMENT, device_class=SensorDeviceClass.VOLTAGE, native_unit_of_measurement=UnitOfElectricPotential.MILLIVOLT, suggested_display_precision=0),
-    BayrolSensorDescription(key="water_temperature", value_fn=_float(ITEM_TEMP), state_class=SensorStateClass.MEASUREMENT, device_class=SensorDeviceClass.TEMPERATURE, native_unit_of_measurement=UnitOfTemperature.CELSIUS, suggested_display_precision=1),
-    BayrolSensorDescription(key="ph_setpoint", value_fn=_float(ITEM_PH_SETPOINT), entity_registry_enabled_default=True, suggested_display_precision=2),
-    BayrolSensorDescription(key="redox_setpoint", value_fn=_float(ITEM_REDOX_SETPOINT), native_unit_of_measurement=UnitOfElectricPotential.MILLIVOLT, suggested_display_precision=0),
-    BayrolSensorDescription(key="pump_status", value_fn=_pump_status, device_class=SensorDeviceClass.ENUM, options=list(PUMP_STATUS.values())),
+    BayrolSensorDescription(
+        key="ph",
+        value_fn=_float(ITEM_PH),
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.PH,
+        suggested_display_precision=2,
+    ),
+    BayrolSensorDescription(
+        key="redox",
+        value_fn=_float(ITEM_REDOX),
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.VOLTAGE,
+        native_unit_of_measurement=UnitOfElectricPotential.MILLIVOLT,
+        suggested_display_precision=0,
+    ),
+    BayrolSensorDescription(
+        key="water_temperature",
+        value_fn=_float(ITEM_TEMP),
+        state_class=SensorStateClass.MEASUREMENT,
+        device_class=SensorDeviceClass.TEMPERATURE,
+        native_unit_of_measurement=UnitOfTemperature.CELSIUS,
+        suggested_display_precision=1,
+    ),
+    BayrolSensorDescription(
+        key="ph_setpoint",
+        value_fn=_float(ITEM_PH_SETPOINT),
+        entity_registry_enabled_default=True,
+        suggested_display_precision=2,
+    ),
+    BayrolSensorDescription(
+        key="redox_setpoint",
+        value_fn=_float(ITEM_REDOX_SETPOINT),
+        native_unit_of_measurement=UnitOfElectricPotential.MILLIVOLT,
+        suggested_display_precision=0,
+    ),
+    BayrolSensorDescription(
+        key="pump_status",
+        value_fn=_pump_status,
+        device_class=SensorDeviceClass.ENUM,
+        options=list(PUMP_STATUS.values()),
+    ),
     BayrolSensorDescription(key="dosing_ph_status", value_fn=_text(ITEM_DOSING_PH)),
     BayrolSensorDescription(key="dosing_chlorine_status", value_fn=_text(ITEM_DOSING_CL)),
-    BayrolSensorDescription(key="daily_filtration", value_fn=lambda d: d.daily_filtration_hours(), native_unit_of_measurement=UnitOfTime.HOURS, device_class=SensorDeviceClass.DURATION, suggested_display_precision=1),
+    BayrolSensorDescription(
+        key="daily_filtration",
+        value_fn=lambda d: d.daily_filtration_hours(),
+        native_unit_of_measurement=UnitOfTime.HOURS,
+        device_class=SensorDeviceClass.DURATION,
+        suggested_display_precision=1,
+    ),
 )
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     coordinator = entry.runtime_data
     entities: list[SensorEntity] = [BayrolSensor(coordinator, d) for d in SENSORS]
     entities += [BayrolIntervalSummary(coordinator, "interval_summary", n) for n in coordinator.data.intervals]

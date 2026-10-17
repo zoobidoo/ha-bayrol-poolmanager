@@ -31,6 +31,13 @@ L'action `bayrol_poolmanager.set_timer_interval` modifie une plage en un seul ap
 mode, jours quelconques). Les diagnostics se téléchargent depuis la page de l'appareil, avec les
 identifiants masqués.
 
+> [!CAUTION]
+> **Mode de la pompe de filtration.** *Arrêt* coupe la pompe jusqu'à ce que vous la remettiez en
+> marche : plus de circulation, et le PoolManager arrête le dosage sans débit. *Marche forcée* la fait
+> tourner en continu. Les deux court-circuitent le programmateur. Si vous automatisez cette entité,
+> prévoyez toujours le retour en *Auto (programmateur)*, par exemple une automatisation qui y revient
+> au bout de quelques heures.
+
 **Compatibilité :** testé sur un PoolManager 5 « Chlorine (Cl) », firmware v221216-M1 (7.8.3). Les
 autres variantes (Oxygène, Brome…) devraient fonctionner en lecture, mais leurs identifiants internes
 peuvent différer. Ouvrez une *issue* avec le fichier de diagnostics si quelque chose manque.
@@ -90,17 +97,32 @@ Le lien *Données de l'appareil* (`plant_settings.php?c=12345`) affiche le même
 > Les navigateurs préremplissent parfois les champs e-mail / mot de passe avec vos identifiants
 > **Home Assistant**. Vérifiez qu'il s'agit bien de ceux du **portail Bayrol** avant de valider.
 
+### Modifier les réglages ensuite
+
+- **Nouvelle adresse IP, nouveau mot de passe du portail :** page de l'intégration → ⋮ →
+  **Reconfigurer**. L'entrée, ses entités et leur historique sont conservés.
+- **Mot de passe du portail refusé :** Home Assistant affiche une notification de
+  *réauthentification* (Paramètres → Appareils et services) ; saisissez-y le nouveau mot de passe.
+
 ## Exemples
 
 ```yaml
 action: bayrol_poolmanager.set_timer_interval
 data:
+  # device_id : obligatoire seulement si vous avez plusieurs PoolManager
   interval: 1
   start: "10:00:00"
   end: "18:00:00"
   days: [mon, tue, wed, thu, fri, sat, sun]
   mode: normal
 ```
+
+Avant tout envoi :
+
+- une plage **active** ne peut pas commencer et finir à la même heure (0 h ou 24 h ?). Les plages
+  inutilisées sont stockées par l'appareil avec début = fin et aucun jour : c'est accepté ;
+- une plage peut passer minuit (22:00–02:00). Les chevauchements sont acceptés : la pompe tourne dès
+  qu'une plage est active.
 
 Le dossier [`examples/`](examples/) contient trois fichiers :
 
@@ -121,8 +143,23 @@ petite API JSON (`POST /cgi-bin/webgui.fcgi?sid=…` avec `{"get": [...], "set":
 - Dans une session, l'appareil ne renvoie que les valeurs qui ont **changé** depuis la requête
   précédente. L'intégration garde donc un cache et rouvre une session toutes les 30 minutes.
 - Interrogation toutes les 60 s par défaut (réglable, minimum 30 s).
+- Une modification part en **une seule** requête (début et fin d'une plage ensemble), puis est
+  relue : si l'appareil a gardé une autre valeur, Home Assistant affiche une erreur. Les écritures
+  sont de simples affectations : la nouvelle tentative automatique après un délai dépassé est sans
+  risque.
 
 Le tableau complet des identifiants figure dans le [README anglais](README.md#how-it-works).
+
+## Sécurité
+
+- **Le mode local passe par `http://` non chiffré** (le PoolManager n'a pas de HTTPS) : sur votre
+  réseau, les mesures et les identifiants de l'utilisateur distant circulent en clair. Gardez
+  l'appareil sur un réseau de confiance (ou un VLAN dédié) et ne l'exposez jamais sur Internet.
+- **Les identifiants** (portail, utilisateur distant) sont stockés par Home Assistant dans
+  `.storage/core.config_entries`, comme pour toute intégration. Ils sont masqués dans les diagnostics.
+- **Test d'écriture :** quand vous saisissez un utilisateur distant dans les options, l'intégration
+  réécrit sur l'appareil l'heure de début actuelle de la plage 6 (même valeur, rien ne change) pour
+  vérifier que les écritures sont acceptées.
 
 ## Dépannage
 
@@ -130,6 +167,9 @@ Le tableau complet des identifiants figure dans le [README anglais](README.md#ho
 |---|---|
 | « Le PoolManager a refusé la modification (113) » | Aucun utilisateur distant connecté. En local, renseignez l'utilisateur distant ou les identifiants du portail dans les options. |
 | « PoolManager injoignable » à la configuration du portail | Vérifiez e-mail et mot de passe (préremplissage du navigateur !) ainsi que le n° d'appareil. La cause exacte est dans le journal (`custom_components.bayrol_poolmanager`). |
+| « Plusieurs PoolManager sont configurés » | Ajoutez `device_id` à l'action `set_timer_interval`. |
+| « La plage N commencerait et finirait à la même heure » | Modifiez le début ou la fin, ou désactivez la plage (jours : aucun, ou mode : pompe arrêtée). |
+| « Le PoolManager a accepté la modification sans l'appliquer » | L'appareil a gardé sa valeur (réglage verrouillé sur l'appareil ?). Vérifiez sur l'écran tactile. |
 | La pompe reste « arrêtée » pendant une plage active | Une plage modifiée en cours de route ne s'applique parfois qu'au prochain démarrage. |
 
 ## Soutenir le projet

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator, Mapping
+from contextlib import asynccontextmanager
 import logging
 from typing import Any
 
@@ -10,7 +12,7 @@ import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, ConfigFlowResult, OptionsFlow
 from homeassistant.const import CONF_HOST, CONF_PASSWORD, CONF_USERNAME
-from homeassistant.core import callback
+from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from homeassistant.helpers.selector import TextSelector, TextSelectorConfig, TextSelectorType
 
@@ -38,8 +40,18 @@ _PASSWORD = TextSelector(TextSelectorConfig(type=TextSelectorType.PASSWORD))
 _EMAIL = TextSelector(TextSelectorConfig(type=TextSelectorType.EMAIL, autocomplete="off"))
 
 
-def _opt(key: str, current: dict[str, Any]) -> vol.Optional:
+def _opt(key: str, current: Mapping[str, Any]) -> vol.Optional:
     return vol.Optional(key, description={"suggested_value": current.get(key)})
+
+
+@asynccontextmanager
+async def _temp_session(hass: HomeAssistant) -> AsyncIterator[aiohttp.ClientSession]:
+    """Short-lived session for a connection test, released right after it."""
+    session = async_create_clientsession(hass, auto_cleanup=False, cookie_jar=aiohttp.CookieJar(unsafe=True))
+    try:
+        yield session
+    finally:
+        session.detach()
 
 
 class BayrolConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -53,14 +65,15 @@ class BayrolConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_cloud(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            client = BayrolClient(
-                self._session(),
-                username=user_input[CONF_USERNAME],
-                password=user_input[CONF_PASSWORD],
-                device_id=user_input.get(CONF_DEVICE_ID) or None,
-                access_code=user_input.get(CONF_ACCESS_CODE),
-            )
-            errors = await self._test(client)
+            async with _temp_session(self.hass) as session:
+                client = BayrolClient(
+                    session,
+                    username=user_input[CONF_USERNAME],
+                    password=user_input[CONF_PASSWORD],
+                    device_id=user_input.get(CONF_DEVICE_ID) or None,
+                    access_code=user_input.get(CONF_ACCESS_CODE),
+                )
+                errors = await self._test(client)
             if not errors:
                 await self.async_set_unique_id(f"cloud_{client.device_id}")
                 self._abort_if_unique_id_configured()
@@ -83,8 +96,12 @@ class BayrolConfigFlow(ConfigFlow, domain=DOMAIN):
     async def async_step_local(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         errors: dict[str, str] = {}
         if user_input is not None:
-            client = BayrolClient(self._session(), host=user_input[CONF_HOST], access_code=user_input.get(CONF_ACCESS_CODE))
-            errors = await self._test(client)
+            # The unique id keeps the host used at creation time (entity ids
+            # derive from it); an entry moved to a new IP is matched by host.
+            self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
+            async with _temp_session(self.hass) as session:
+                client = BayrolClient(session, host=user_input[CONF_HOST], access_code=user_input.get(CONF_ACCESS_CODE))
+                errors = await self._test(client)
             if not errors:
                 await self.async_set_unique_id(f"local_{user_input[CONF_HOST]}")
                 self._abort_if_unique_id_configured()
@@ -97,8 +114,72 @@ class BayrolConfigFlow(ConfigFlow, domain=DOMAIN):
             step_id="local", data_schema=self.add_suggested_values_to_schema(schema, user_input), errors=errors
         )
 
-    def _session(self) -> aiohttp.ClientSession:
-        return async_create_clientsession(self.hass, cookie_jar=aiohttp.CookieJar(unsafe=True))
+    async def async_step_reauth(self, entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """New Bayrol portal password (cloud entry, or cloud writes of a local entry)."""
+        entry = self._get_reauth_entry()
+        local = entry.data.get(CONF_CONNECTION) == CONNECTION_LOCAL
+        current = entry.options if local else entry.data
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            async with _temp_session(self.hass) as session:
+                client = BayrolClient(
+                    session,
+                    username=user_input[CONF_USERNAME],
+                    password=user_input[CONF_PASSWORD],
+                    device_id=current.get(CONF_DEVICE_ID) or None,
+                )
+                errors = await self._test(client)
+            if not errors:
+                if local:
+                    return self.async_update_reload_and_abort(entry, options={**entry.options, **user_input})
+                return self.async_update_reload_and_abort(entry, data_updates=user_input)
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_USERNAME, default=current.get(CONF_USERNAME, "")): _EMAIL,
+                vol.Required(CONF_PASSWORD): _PASSWORD,
+            }
+        )
+        return self.async_show_form(step_id="reauth_confirm", data_schema=schema, errors=errors)
+
+    async def async_step_reconfigure(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Change the IP address (local) or the credentials (cloud) without re-creating the entry."""
+        entry = self._get_reconfigure_entry()
+        local = entry.data.get(CONF_CONNECTION) == CONNECTION_LOCAL
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            if local and user_input[CONF_HOST] != entry.data.get(CONF_HOST):
+                self._async_abort_entries_match({CONF_HOST: user_input[CONF_HOST]})
+            async with _temp_session(self.hass) as session:
+                if local:
+                    client = BayrolClient(session, host=user_input[CONF_HOST])
+                else:
+                    client = BayrolClient(
+                        session,
+                        username=user_input[CONF_USERNAME],
+                        password=user_input[CONF_PASSWORD],
+                        device_id=entry.data.get(CONF_DEVICE_ID),
+                    )
+                errors = await self._test(client)
+            if not errors:
+                # The unique id is kept on purpose: entity unique ids derive from it.
+                return self.async_update_reload_and_abort(
+                    entry,
+                    title=f"PoolManager ({user_input[CONF_HOST]})" if local else entry.title,
+                    data_updates={CONF_ACCESS_CODE: "", **user_input},
+                )
+        current = {**entry.data, **(user_input or {})}
+        if local:
+            fields = {vol.Required(CONF_HOST, default=current.get(CONF_HOST, "")): str}
+        else:
+            fields = {
+                vol.Required(CONF_USERNAME, default=current.get(CONF_USERNAME, "")): _EMAIL,
+                vol.Required(CONF_PASSWORD): _PASSWORD,
+            }
+        fields[_opt(CONF_ACCESS_CODE, current)] = str
+        return self.async_show_form(step_id="reconfigure", data_schema=vol.Schema(fields), errors=errors)
 
     @staticmethod
     async def _test(client: BayrolClient) -> dict[str, str]:
@@ -130,13 +211,14 @@ class BayrolOptionsFlow(OptionsFlow):
             if local and user_input.get(CONF_REMOTE_USER):
                 errors = await self._test_local_write(user_input)
             elif local and user_input.get(CONF_USERNAME) and user_input.get(CONF_PASSWORD):
-                client = BayrolClient(
-                    async_create_clientsession(self.hass, cookie_jar=aiohttp.CookieJar(unsafe=True)),
-                    username=user_input[CONF_USERNAME],
-                    password=user_input[CONF_PASSWORD],
-                    device_id=user_input.get(CONF_DEVICE_ID) or None,
-                )
-                errors = await BayrolConfigFlow._test(client)
+                async with _temp_session(self.hass) as session:
+                    client = BayrolClient(
+                        session,
+                        username=user_input[CONF_USERNAME],
+                        password=user_input[CONF_PASSWORD],
+                        device_id=user_input.get(CONF_DEVICE_ID) or None,
+                    )
+                    errors = await BayrolConfigFlow._test(client)
                 if not errors:
                     user_input[CONF_DEVICE_ID] = client.device_id
             if not errors:
@@ -156,13 +238,22 @@ class BayrolOptionsFlow(OptionsFlow):
         return self.async_show_form(step_id="init", data_schema=vol.Schema(fields), errors=errors)
 
     async def _test_local_write(self, user_input: dict[str, Any]) -> dict[str, str]:
-        """Check that the remote user can log in on the local device."""
-        client = BayrolClient(
-            async_create_clientsession(self.hass, cookie_jar=aiohttp.CookieJar(unsafe=True)),
-            host=self.config_entry.data[CONF_HOST],
-            remote_user=user_input[CONF_REMOTE_USER],
-            remote_password=user_input.get(CONF_REMOTE_PASSWORD),
-        )
+        """Check that the remote user can log in on the local device.
+
+        The check writes the current start time of interval 6 back to the
+        device (same value, nothing changes) to prove that writes are accepted.
+        """
+        async with _temp_session(self.hass) as session:
+            client = BayrolClient(
+                session,
+                host=self.config_entry.data[CONF_HOST],
+                remote_user=user_input[CONF_REMOTE_USER],
+                remote_password=user_input.get(CONF_REMOTE_PASSWORD),
+            )
+            return await self._probe_write(client)
+
+    @staticmethod
+    async def _probe_write(client: BayrolClient) -> dict[str, str]:
         probe = TIMER_INTERVALS[6]["on"]
         try:
             current = (await client.async_get([probe]))[probe]

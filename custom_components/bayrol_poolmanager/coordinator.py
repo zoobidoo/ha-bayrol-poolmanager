@@ -7,12 +7,13 @@ from datetime import time, timedelta
 import logging
 from typing import Any
 
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.exceptions import HomeAssistantError
+from homeassistant.exceptions import ConfigEntryAuthFailed, HomeAssistantError, ServiceValidationError
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.util import dt as dt_util
 
-from .api import BayrolAuthError, BayrolClient, BayrolError, BayrolWriteRefused
+from .api import BayrolAuthError, BayrolClient, BayrolError, BayrolWriteNotApplied, BayrolWriteRefused
 from .const import (
     ALL_ITEMS,
     DOMAIN,
@@ -66,14 +67,17 @@ class PoolData:
 
 
 def parse_time(value: Any) -> time | None:
+    """Parse "HH:MM[:SS]". "24:00" (end of day) is read as midnight; anything else out of range is rejected."""
     if not value:
         return None
     try:
         parts = [int(p) for p in str(value).strip().split(":")]
         while len(parts) < 3:
             parts.append(0)
-        return time(parts[0] % 24, parts[1], parts[2])
-    except (ValueError, IndexError):
+        if parts[0] == 24 and parts[1] == parts[2] == 0:
+            return time(0, 0)
+        return time(*parts[:3])
+    except (ValueError, TypeError):
         return None
 
 
@@ -87,14 +91,19 @@ def parse_int(value: Any) -> int | None:
 class BayrolCoordinator(DataUpdateCoordinator[PoolData]):
     """Polls the PoolManager at a fixed interval."""
 
+    config_entry: ConfigEntry
+
     def __init__(
         self,
         hass: HomeAssistant,
+        entry: ConfigEntry,
         client: BayrolClient,
         scan_interval: int,
         write_client: BayrolClient | None = None,
     ) -> None:
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=timedelta(seconds=scan_interval))
+        super().__init__(
+            hass, _LOGGER, config_entry=entry, name=DOMAIN, update_interval=timedelta(seconds=scan_interval)
+        )
         self.client = client
         # Locally the device refuses writes unless a remote user is logged in:
         # an optional cloud client can be used for writes instead.
@@ -104,31 +113,61 @@ class BayrolCoordinator(DataUpdateCoordinator[PoolData]):
         try:
             raw = await self.client.async_get(ALL_ITEMS)
         except BayrolAuthError as err:
-            raise UpdateFailed(f"Portal authentication failed: {err}") from err
+            # Starts the re-authentication flow in the UI.
+            raise ConfigEntryAuthFailed(f"Portal authentication failed: {err}") from err
         except BayrolError as err:
             raise UpdateFailed(f"PoolManager unreachable: {err}") from err
         return build_pool_data(raw)
 
+    def _merged(self, values: dict[str, str]) -> PoolData | None:
+        if self.data is None:
+            return None
+        raw = dict(self.data.raw)
+        raw.update(values)
+        return build_pool_data(raw)
+
     async def async_write(self, values: dict[str, str]) -> None:
+        """Validate, then write values to the device."""
+        if (after := self._merged(values)) is not None:
+            for number, ids in TIMER_INTERVALS.items():
+                iv = after.intervals[number]
+                touched = any(ids[k] in values for k in ("on", "off", "mode", "days"))
+                # Start == end is how unused intervals are stored (days = 0).
+                # On an active interval its meaning (0 h or 24 h) is ambiguous:
+                # refuse it rather than guess.
+                if touched and iv.enabled and iv.start is not None and iv.start == iv.end:
+                    raise ServiceValidationError(
+                        translation_domain=DOMAIN,
+                        translation_key="empty_interval",
+                        translation_placeholders={"n": str(number)},
+                    )
         try:
             await self.write_client.async_set(values)
         except BayrolAuthError as err:
+            # Wrong portal password (cloud entry, or cloud writes of a local entry).
+            self.config_entry.async_start_reauth(self.hass)
             raise HomeAssistantError(
-                translation_domain=DOMAIN, translation_key="portal_auth_failed", translation_placeholders={"error": str(err)}
+                translation_domain=DOMAIN,
+                translation_key="portal_auth_failed",
+                translation_placeholders={"error": str(err)},
             ) from err
         except BayrolWriteRefused as err:
             key = "write_refused" if self.write_client.is_cloud else "write_refused_local"
             raise HomeAssistantError(
                 translation_domain=DOMAIN, translation_key=key, translation_placeholders={"error": str(err)}
             ) from err
+        except BayrolWriteNotApplied as err:
+            raise HomeAssistantError(
+                translation_domain=DOMAIN,
+                translation_key="write_not_applied",
+                translation_placeholders={"error": str(err)},
+            ) from err
         except BayrolError as err:
             raise HomeAssistantError(
                 translation_domain=DOMAIN, translation_key="write_failed", translation_placeholders={"error": str(err)}
             ) from err
-        if self.data is not None:
-            raw = dict(self.data.raw)
-            raw.update(values)
-            self.async_set_updated_data(build_pool_data(raw))
+        if after is not None:
+            self.async_set_updated_data(after)
         await self.async_request_refresh()
 
 

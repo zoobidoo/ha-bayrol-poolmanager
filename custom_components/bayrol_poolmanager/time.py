@@ -11,10 +11,13 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import BayrolConfigEntry
 from .const import TIMER_INTERVALS
+from .coordinator import BayrolCoordinator
 from .entity import BayrolIntervalEntity
 
 
-async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback) -> None:
+async def async_setup_entry(
+    hass: HomeAssistant, entry: BayrolConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
     c = entry.runtime_data
     async_add_entities(
         [IntervalTime(c, "interval_start", n, "on") for n in TIMER_INTERVALS]
@@ -25,7 +28,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: BayrolConfigEntry, async
 class IntervalTime(BayrolIntervalEntity, TimeEntity):
     _attr_entity_category = EntityCategory.CONFIG
 
-    def __init__(self, coordinator, key: str, number: int, field: str) -> None:
+    def __init__(self, coordinator: BayrolCoordinator, key: str, number: int, field: str) -> None:
         super().__init__(coordinator, key, number)
         self._field = field
 

@@ -1,5 +1,9 @@
 set_timer_interval:
   fields:
+    device_id:
+      selector:
+        device:
+          integration: bayrol_poolmanager
     interval:
       required: true
       example: 1

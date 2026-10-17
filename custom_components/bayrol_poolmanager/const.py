@@ -48,12 +48,48 @@ LOGIN_PASS = "9.17401.pass"
 
 # Filter pump programmable timer, intervals 1 to 6
 TIMER_INTERVALS = {
-    1: {"mode": "35.5184.value", "days": "36.5203.value", "on": "40.8533.value", "off": "40.8536.value", "label": "1.1257.value"},
-    2: {"mode": "35.5185.value", "days": "36.5204.value", "on": "40.8534.value", "off": "40.8537.value", "label": "1.1258.value"},
-    3: {"mode": "35.5186.value", "days": "36.5205.value", "on": "40.8535.value", "off": "40.8538.value", "label": "1.1259.value"},
-    4: {"mode": "35.5187.value", "days": "36.5206.value", "on": "40.8539.value", "off": "40.8542.value", "label": "1.1260.value"},
-    5: {"mode": "35.5188.value", "days": "36.5207.value", "on": "40.8540.value", "off": "40.8543.value", "label": "1.1261.value"},
-    6: {"mode": "35.5189.value", "days": "36.5208.value", "on": "40.8541.value", "off": "40.8544.value", "label": "1.1262.value"},
+    1: {
+        "mode": "35.5184.value",
+        "days": "36.5203.value",
+        "on": "40.8533.value",
+        "off": "40.8536.value",
+        "label": "1.1257.value",
+    },
+    2: {
+        "mode": "35.5185.value",
+        "days": "36.5204.value",
+        "on": "40.8534.value",
+        "off": "40.8537.value",
+        "label": "1.1258.value",
+    },
+    3: {
+        "mode": "35.5186.value",
+        "days": "36.5205.value",
+        "on": "40.8535.value",
+        "off": "40.8538.value",
+        "label": "1.1259.value",
+    },
+    4: {
+        "mode": "35.5187.value",
+        "days": "36.5206.value",
+        "on": "40.8539.value",
+        "off": "40.8542.value",
+        "label": "1.1260.value",
+    },
+    5: {
+        "mode": "35.5188.value",
+        "days": "36.5207.value",
+        "on": "40.8540.value",
+        "off": "40.8543.value",
+        "label": "1.1261.value",
+    },
+    6: {
+        "mode": "35.5189.value",
+        "days": "36.5208.value",
+        "on": "40.8541.value",
+        "off": "40.8544.value",
+        "label": "1.1262.value",
+    },
 }
 
 # Interval pump mode (bit mask)

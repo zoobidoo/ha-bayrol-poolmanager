@@ -6,7 +6,7 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import DOMAIN
-from .coordinator import BayrolCoordinator
+from .coordinator import BayrolCoordinator, TimerInterval
 
 
 class BayrolEntity(CoordinatorEntity[BayrolCoordinator]):
@@ -40,5 +40,5 @@ class BayrolIntervalEntity(BayrolEntity):
         self._attr_translation_placeholders = {"n": str(number)}
 
     @property
-    def interval(self):
+    def interval(self) -> TimerInterval:
         return self.coordinator.data.intervals[self.number]
